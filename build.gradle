@@ -1,0 +1,30 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:2.0.0'
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+        // 下面的部分就为新添加的。
+        // 用于上传项目到bintray
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.2'
+        // 用于生成javaDoc和jar，如果gradle版本为2.4及以上，下面的版本就要改为1.3，具体可参考https://github.com/dcendents/android-maven-gradle-plugin
+        classpath 'com.github.dcendents:android-maven-plugin:1.2'
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        jcenter()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
