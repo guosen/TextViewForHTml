@@ -1,5 +1,6 @@
 package com.sen.textviewforhtml;
 
+import java.util.HashMap;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -18,16 +19,8 @@ import android.text.style.BackgroundColorSpan;
 import android.text.style.BulletSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.LeadingMarginSpan;
+import android.util.Log;
 
-
-/**
- * 扩展TextView显示html
- * <p/>
- * fix 还没支持图片
- *
- * @author shouwang
- * @date 2016-7-20
- */
 public class HtmlTagFormatter {
     private static final String TAG_HANDLE_SPAN      = "span";
     private static final String TAG_HANDLE_STYLE     = "style";
@@ -41,7 +34,7 @@ public class HtmlTagFormatter {
     private String         styleContent   = "";
     private Vector<String> mListParents   = new Vector<String>();//用来标记列表(有序和无序列表)
     private int            mListItemCount = 0;//用来标记列表(有序和无序列表)
-
+    HashMap<String,String> mTagStyle =new HashMap<>();
     public Spanned handlerHtmlContent(final Context context, String htmlContent) throws NumberFormatException {
         return HtmlParser.buildSpannedText(htmlContent, new HtmlParser.TagHandler() {
             @Override
@@ -51,28 +44,24 @@ public class HtmlTagFormatter {
                     if (opening) {
                         startIndex = output.length();
                         styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
+                        mTagStyle.put(tag,styleContent);
                     } else {
                         stopIndex = output.length();
-                        if (!TextUtils.isEmpty(styleContent)) {
-                            String[] styleValues = styleContent.split(";");
-                            for (String styleValue : styleValues) {
-                                String[] tmpValues = styleValue.split(":");
-                                if (tmpValues != null && tmpValues.length > 0) { //(font-size=14px)
-                                    if (TAG_FONT_SIZE.equals(tmpValues[0])) { //处理文字效果字体大小
-                                        int size = Integer.valueOf(getAllNumbers(tmpValues[1]));
-                                        output.setSpan(new AbsoluteSizeSpan(sp2px(context, size)), startIndex, stopIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                                    } else if (TAG_BACKGROUND_COLOR.equals(tmpValues[0])) { //处理背景效果
-                                        output.setSpan(new BackgroundColorSpan(Color.parseColor(tmpValues[1])), startIndex, stopIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                                    } else if (Tag_FONT_COLOR.equals(tmpValues[0])) {//处理字体颜色<span style="color:"#000000">
-                                        output.setSpan(new ForegroundColorSpan(Color.parseColor(tmpValues[1])), startIndex, stopIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                                    } else if(TAG_TEXT_ALIGN.equals(tmpValues[0])){
-                                        handleAlignTag(output,tmpValues[1]);
-                                    }
-                                }
-                            }
-                        }
+                        handleStyleTag(output,mTagStyle.get(tag),context);
+                        mTagStyle.put(tag,styleContent);
                     }
-                } else if (tag.equals(TAG_HANDLE_ALIGN)) {
+                }
+                if(tag.equals("p")){
+                    if(opening) {
+                        startIndex = output.length();
+                        styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
+                        mTagStyle.put(tag,styleContent);
+                    } else {
+                        stopIndex = output.length();
+                        handleStyleTag(output,mTagStyle.get(tag),context);
+                    }
+                }
+                else if (tag.equals(TAG_HANDLE_ALIGN)) {
                     if (opening) {
                         startIndex = output.length();
                     } else {
@@ -140,12 +129,42 @@ public class HtmlTagFormatter {
         // 参考:https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/text/SpannableStringBuilder.java
         // throw new RuntimeException("PARAGRAPH span must start at paragraph boundary");
         // AlignmentSpan继承ParagraphStyle;会检查前后是不是有换行符\n;没有的话抛出以上异常
-        if(!"\n".equals(output.charAt(stopIndex-1))) {
+        if(!"\n".equals(""+output.charAt(stopIndex-1))) {
             output.append("\n");
-            output.setSpan(as, startIndex, stopIndex+1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            stopIndex++;
+
         }
+        if(!"\n".equals(""+output.charAt(0))){
+            output.insert(0,"\n");
+            stopIndex++;
+            startIndex--;
+        }
+        output.setSpan(as, startIndex, stopIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
     }
 
+    private void handleStyleTag(Editable output,String styleContent,Context context){
+        if (!TextUtils.isEmpty(styleContent)) {
+            String[] styleValues = styleContent.split(";");
+            for (String styleValue : styleValues) {
+                String[] tmpValues = styleValue.split(":");
+                if (tmpValues != null && tmpValues.length > 0) { //�?要标�?+数据才可食用(font-size=14px)
+                    if(TAG_FONT_SIZE.equals(tmpValues[0])) { //处理文字效果
+                        int size = Integer.valueOf(getAllNumbers(tmpValues[1]));
+                        Log.i("tag",size+"");
+                        output.setSpan(new AbsoluteSizeSpan(sp2px(context,size)), startIndex, stopIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    } else if(TAG_BACKGROUND_COLOR.equals(tmpValues[0])) { //处理背景效果
+                        output.setSpan(new BackgroundColorSpan(Color.parseColor(tmpValues[1])), startIndex, stopIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    else if(Tag_FONT_COLOR.equals(tmpValues[0])){
+                        String str=output.toString();
+                        output.setSpan(new ForegroundColorSpan(Color.parseColor(tmpValues[1])),startIndex,stopIndex,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }else if(TAG_TEXT_ALIGN.equals(tmpValues[0])){
+                        handleAlignTag(output,tmpValues[1]);
+                    }
+                }
+            }
+        }
+    }
     public static int sp2px(Context context, float spValue) {
         final float fontScale = context.getResources().getDisplayMetrics().scaledDensity;
         return (int) (spValue * fontScale + 0.5f);

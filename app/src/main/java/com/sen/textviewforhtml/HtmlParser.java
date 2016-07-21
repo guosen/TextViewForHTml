@@ -11,14 +11,6 @@ import org.xml.sax.XMLReader;
 import android.text.Editable;
 import android.text.Html;
 import android.text.Spanned;;
-
-/**
- * HTML标签解析
- * 实现Html.TagHandle解析
- *
- * @author shouwang
- * @date 2016-7-20
- */
 public class HtmlParser implements Html.TagHandler, ContentHandler {
 
     private final TagHandler     handler;
