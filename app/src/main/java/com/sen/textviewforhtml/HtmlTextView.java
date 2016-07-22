@@ -30,7 +30,7 @@ public class HtmlTextView extends TextView {
     public void setHtmlText(CharSequence text){
         HtmlTagFormatter htmlTagFormatter = new HtmlTagFormatter();
         try {
-            Spanned spanned = htmlTagFormatter.handlerHtmlContent(getContext(), getText().toString());
+            Spanned spanned = htmlTagFormatter.handlerHtmlContent(getContext(), text.toString());
             setText(spanned);
         }catch (Exception ex){
             //如果标签处理有误先忽略;不闪退;忽略出错的标签

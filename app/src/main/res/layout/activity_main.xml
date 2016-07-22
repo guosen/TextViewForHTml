@@ -10,7 +10,8 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.sen.textviewforhtml.MainActivity">
 
-    <TextView
+    <com.sen.textviewforhtml.HtmlTextView
+        android:id="@+id/htvHtml"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Hello World!"/>

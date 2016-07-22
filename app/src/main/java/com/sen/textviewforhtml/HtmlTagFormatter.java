@@ -29,12 +29,11 @@ public class HtmlTagFormatter {
     private static final String TAG_BACKGROUND_COLOR = "background-color";
     private static final String Tag_FONT_COLOR       = "color";
     private static final String TAG_TEXT_ALIGN       = "text-align";
-    private int startIndex;
-    private int stopIndex;
     private String         styleContent   = "";
     private Vector<String> mListParents   = new Vector<String>();//用来标记列表(有序和无序列表)
     private int            mListItemCount = 0;//用来标记列表(有序和无序列表)
     HashMap<String,String> mTagStyle =new HashMap<>();
+    HashMap<String,Integer>mTagStartIndex=new HashMap<>();//用来保存标签开始标记
     public Spanned handlerHtmlContent(final Context context, String htmlContent) throws NumberFormatException {
         return HtmlParser.buildSpannedText(htmlContent, new HtmlParser.TagHandler() {
             @Override
@@ -42,32 +41,25 @@ public class HtmlTagFormatter {
                 if (tag.equals(TAG_HANDLE_SPAN)) {
                     //<style>标签的处理方式
                     if (opening) {
-                        startIndex = output.length();
+                        mTagStartIndex.put(tag,output.length());
                         styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
                         mTagStyle.put(tag,styleContent);
                     } else {
-                        stopIndex = output.length();
-                        handleStyleTag(output,mTagStyle.get(tag),context);
-                        mTagStyle.put(tag,styleContent);
+                        handleStyleTag(output,tag,context);
+                        mTagStyle.put(tag,"");
                     }
                 }
                 if(tag.equals("p")){
                     if(opening) {
-                        startIndex = output.length();
+                        mTagStartIndex.put(tag,output.length());
                         styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
                         mTagStyle.put(tag,styleContent);
                     } else {
-                        stopIndex = output.length();
-                        handleStyleTag(output,mTagStyle.get(tag),context);
+                        handleStyleTag(output,tag,context);
+                        mTagStyle.put(tag,"");
                     }
                 }
-                else if (tag.equals(TAG_HANDLE_ALIGN)) {
-                    if (opening) {
-                        startIndex = output.length();
-                    } else {
-                        stopIndex = output.length();
-                    }
-                }
+
                 //列表标签的解析渲染
                 if (tag.equals("ul") || tag.equals("ol") || tag.equals("dd")) {
                     if (opening) {
@@ -114,7 +106,9 @@ public class HtmlTagFormatter {
         }
     }
     //处理<text-align>
-    private void handleAlignTag(Editable output,String alignTag){
+    private void handleAlignTag(Editable output,String parentTag,String alignTag){
+        int startIndex=mTagStartIndex.get(parentTag);
+        int stopIndex=output.length();
         AlignmentSpan.Standard as=new AlignmentSpan.Standard(Layout.Alignment.ALIGN_NORMAL);
         if(alignTag.equals("center")){
             as = new AlignmentSpan.Standard(
@@ -129,20 +123,23 @@ public class HtmlTagFormatter {
         // 参考:https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/text/SpannableStringBuilder.java
         // throw new RuntimeException("PARAGRAPH span must start at paragraph boundary");
         // AlignmentSpan继承ParagraphStyle;会检查前后是不是有换行符\n;没有的话抛出以上异常
-        if(!"\n".equals(""+output.charAt(stopIndex-1))) {
-            output.append("\n");
-            stopIndex++;
-
-        }
-        if(!"\n".equals(""+output.charAt(0))){
-            output.insert(0,"\n");
-            stopIndex++;
-            startIndex--;
-        }
+//        if(!"\n".equals(""+output.charAt(stopIndex-1))) {
+//            output.append("\n");
+//            stopIndex++;
+//
+//        }
+//        if(!"\n".equals(""+output.charAt(0))){
+//            output.insert(0,"\n");
+//            stopIndex++;
+//            startIndex--;
+//        }
         output.setSpan(as, startIndex, stopIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
     }
 
-    private void handleStyleTag(Editable output,String styleContent,Context context){
+    private void handleStyleTag(Editable output,String tag,Context context){
+        String styleContent=mTagStyle.get(tag);
+        int startIndex=mTagStartIndex.get(tag);
+        int stopIndex=output.length();
         if (!TextUtils.isEmpty(styleContent)) {
             String[] styleValues = styleContent.split(";");
             for (String styleValue : styleValues) {
@@ -159,7 +156,7 @@ public class HtmlTagFormatter {
                         String str=output.toString();
                         output.setSpan(new ForegroundColorSpan(Color.parseColor(tmpValues[1])),startIndex,stopIndex,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     }else if(TAG_TEXT_ALIGN.equals(tmpValues[0])){
-                        handleAlignTag(output,tmpValues[1]);
+                        handleAlignTag(output,tag,tmpValues[1]);
                     }
                 }
             }
