@@ -69,6 +69,12 @@ public class HtmlTagFormatter {
                     mListItemCount = 0;
                 } else if (tag.equals("li") && !opening) {
                     handleListTag(output);
+                    handleStyleTag(output, tag, context);
+                    mTagStyle.put(tag, "");
+                } else if (tag.equals("li") && opening) {
+                    mTagStartIndex.put(tag, output.length());
+                    styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
+                    mTagStyle.put(tag, styleContent);
                 }
                 return false;
             }
