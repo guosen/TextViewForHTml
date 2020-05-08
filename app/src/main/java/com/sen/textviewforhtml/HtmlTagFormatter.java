@@ -11,6 +11,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.text.Editable;
 import android.text.Layout;
+import android.text.Spannable;
 import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.style.AbsoluteSizeSpan;
@@ -21,7 +22,7 @@ import android.text.style.ForegroundColorSpan;
 import android.text.style.LeadingMarginSpan;
 import android.util.Log;
 
-public class HtmlTagFormatter {
+public class HtmlTagFormatter implements WrapperTagHandler{
     private static final String TAG_HANDLE_SPAN      = "span";
     private static final String TAG_HANDLE_STYLE     = "style";
     private static final String TAG_HANDLE_ALIGN     = "align";
@@ -34,52 +35,56 @@ public class HtmlTagFormatter {
     private int            mListItemCount = 0;//用来标记列表(有序和无序列表)
     HashMap<String,String> mTagStyle =new HashMap<>();
     HashMap<String,Integer>mTagStartIndex=new HashMap<>();//用来保存标签开始标记
-    public Spanned handlerHtmlContent(final Context context, String htmlContent) throws NumberFormatException {
-        return HtmlParser.buildSpannedText(htmlContent, new HtmlParser.TagHandler() {
-            @Override
-            public boolean handleTag(boolean opening, String tag, Editable output, Attributes attributes) {
-                if (tag.equals(TAG_HANDLE_SPAN)) {
-                    //<style>标签的处理方式
-                    if (opening) {
-                        mTagStartIndex.put(tag,output.length());
-                        styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
-                        mTagStyle.put(tag,styleContent);
-                    } else {
-                        handleStyleTag(output,tag,context);
-                        mTagStyle.put(tag,"");
-                    }
-                }
-                if(tag.equals("p")){
-                    if(opening) {
-                        mTagStartIndex.put(tag,output.length());
-                        styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
-                        mTagStyle.put(tag,styleContent);
-                    } else {
-                        handleStyleTag(output,tag,context);
-                        mTagStyle.put(tag,"");
-                    }
-                }
 
-                //列表标签的解析渲染
-                if (tag.equals("ul") || tag.equals("ol") || tag.equals("dd")) {
-                    if (opening) {
-                        mListParents.add(tag);
-                    } else mListParents.remove(tag);
-
-                    mListItemCount = 0;
-                } else if (tag.equals("li") && !opening) {
-                    handleListTag(output);
-                    handleStyleTag(output, tag, context);
-                    mTagStyle.put(tag, "");
-                } else if (tag.equals("li") && opening) {
-                    mTagStartIndex.put(tag, output.length());
-                    styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
-                    mTagStyle.put(tag, styleContent);
-                }
-                return false;
-            }
-        });
+    private Context mContext ;
+    public HtmlTagFormatter(Context context){
+        this.mContext = context;
     }
+    @Override
+    public boolean handleTag(boolean opening, String tag, Editable output, Attributes attributes) {
+        if (tag.equals(TAG_HANDLE_SPAN)) {
+            //<style>标签的处理方式
+            if (opening) {
+                mTagStartIndex.put(tag,output.length());
+                styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
+                mTagStyle.put(tag,styleContent);
+            } else {
+                handleStyleTag(output,tag,mContext);
+                mTagStyle.put(tag,"");
+            }
+        }
+        if(tag.equals("p")){
+            if(opening) {
+                mTagStartIndex.put(tag,output.length());
+                styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
+                mTagStyle.put(tag,styleContent);
+            } else {
+                handleStyleTag(output,tag,mContext);
+                mTagStyle.put(tag,"");
+            }
+        }
+
+        //列表标签的解析渲染
+        if (tag.equals("ul") || tag.equals("ol") || tag.equals("dd")) {
+            if (opening) {
+                mListParents.add(tag);
+            } else mListParents.remove(tag);
+
+            mListItemCount = 0;
+        } else if (tag.equals("li") && !opening) {
+            handleListTag(output);
+            handleStyleTag(output, tag, mContext);
+            mTagStyle.put(tag, "");
+        } else if (tag.equals("li") && opening) {
+            mTagStartIndex.put(tag, output.length());
+            styleContent = HtmlParser.getValue(attributes, TAG_HANDLE_STYLE);
+            mTagStyle.put(tag, styleContent);
+        }
+        return false;
+    }
+
+
+
 
     //正则获取字体
     private static String getAllNumbers(String body) {
@@ -94,21 +99,24 @@ public class HtmlTagFormatter {
     //处理列表标签
     private void handleListTag(Editable output) {
         if (mListParents.lastElement().equals("ul")) {
-            output.append("\n");
             String[] split = output.toString().split("\n");
-
-            int lastIndex = split.length - 1;
-            int start = output.length() - split[lastIndex].length() - 1;
-            output.setSpan(new BulletSpan(15), start, output.length(), 0);
-        } else if (mListParents.lastElement().equals("ol")) {
-            mListItemCount++;
-            output.append("\n");
-            String[] split = output.toString().split("\n");
-
             int lastIndex = split.length - 1;
             int start = output.length() - split[lastIndex].length() - 1;
             output.insert(start, mListItemCount + ". ");
-            output.setSpan(new LeadingMarginSpan.Standard(15 * mListParents.size()), start, output.length(), 0);
+            if (output.charAt(start-1)!='\n'){
+                output.insert(start-1,"\n");
+            }
+            Log.d("dd","11111111111 start: " +start);
+             setSpan(output,new BulletSpan(15), start, output.length(), 0);
+        } else if (mListParents.lastElement().equals("ol")) {
+            mListItemCount++;
+            String[] split = output.toString().split("\n");
+            int lastIndex = split.length - 1;
+            int start = output.length() - split[lastIndex].length() - 1;
+            output.insert(start, mListItemCount + ". ");
+
+            Log.d("dd","22222222"+"start: " +start);
+            setSpan(output,new LeadingMarginSpan.Standard(15 * mListParents.size()), start, output.length(), 0);
         }
     }
     //处理<text-align>
@@ -146,6 +154,11 @@ public class HtmlTagFormatter {
         String styleContent=mTagStyle.get(tag);
         int startIndex=mTagStartIndex.get(tag);
         int stopIndex=output.length();
+        char c = output.charAt(stopIndex-1);
+        if (c!='\n'){
+            output.append('\n');
+            stopIndex++;
+        }
         if (!TextUtils.isEmpty(styleContent)) {
             String[] styleValues = styleContent.split(";");
             for (String styleValue : styleValues) {
@@ -172,4 +185,16 @@ public class HtmlTagFormatter {
         final float fontScale = context.getResources().getDisplayMetrics().scaledDensity;
         return (int) (spValue * fontScale + 0.5f);
     }
+
+    private void setSpan(Editable output,Object what, int start,int end,  int flags) {
+        if (output.charAt(start-1)!='\n'){
+            output.insert(start-1,"\n");
+        }
+        if (output.charAt(end-1)!='\n'){
+            output.append('\n');
+            end ++ ;
+        }
+        output.setSpan( what,start, end, flags);
+    }
+
 }

@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/TextViewForHtml.iml" filepath="$PROJECT_DIR$/TextViewForHtml.iml" />
+      <module fileurl="file://$PROJECT_DIR$/AndroidProject-TextViewForHTml.iml" filepath="$PROJECT_DIR$/AndroidProject-TextViewForHTml.iml" group="TextViewForHTml" />
+      <module fileurl="file://$PROJECT_DIR$/TextViewForHTml.iml" filepath="$PROJECT_DIR$/TextViewForHTml.iml" group="TextViewForHTml" />
+      <module fileurl="file://$PROJECT_DIR$/app/TextViewForHTml-app.iml" filepath="$PROJECT_DIR$/app/TextViewForHTml-app.iml" group="TextViewForHTml/app" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
